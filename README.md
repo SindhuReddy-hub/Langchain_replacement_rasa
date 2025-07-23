@@ -20,3 +20,13 @@ uvicorn server.api:app --reload
 ```bash
 curl -X POST http://127.0.0.1:8000/chat -H "Content-Type: application/json" -d '{"message": "List my s3 buckets"}'
 ```
+
+
+Run the Streamlit Chatbot
+Make sure your chatbot.py logic is working, then run:
+
+bash
+Copy
+Edit
+streamlit run ui/streamlit_chat.py
+
