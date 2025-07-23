@@ -1,0 +1,62 @@
+import streamlit as st
+from datetime import datetime
+from chatbot import run_chatbot
+from components.s3_handler import upload_file_to_s3
+
+st.set_page_config(page_title="🧠 LangChain AWS Chatbot", layout="wide")
+
+st.markdown(
+    """
+    <style>
+    .message-user { color: #1E90FF; font-weight: bold; }
+    .message-bot { color: #32CD32; font-weight: bold; }
+    .timestamp { font-size: 0.75em; color: #999999; }
+    </style>
+    """, unsafe_allow_html=True
+)
+
+st.title("🧠 LangChain Chatbot for AWS")
+
+# Session history
+if "history" not in st.session_state:
+    st.session_state.history = []
+
+# Tool selector
+tool = st.selectbox("Choose AWS Tool Action", [
+    "General Chat", "Upload to S3", "List Buckets"
+])
+
+# File upload for S3
+uploaded_file = None
+if tool == "Upload to S3":
+    uploaded_file = st.file_uploader("Choose file to upload to S3")
+
+with st.form("chat_form", clear_on_submit=True):
+    user_input = st.text_input("💬 Your Message:", placeholder="Type something...")
+    submit = st.form_submit_button("Send")
+
+if submit and user_input:
+    timestamp = datetime.now().strftime("%H:%M:%S")
+    st.session_state.history.append(("user", user_input, timestamp))
+
+    with st.spinner("Bot is typing..."):
+        if tool == "Upload to S3" and uploaded_file:
+            with open(uploaded_file.name, "wb") as f:
+                f.write(uploaded_file.getbuffer())
+            bucket = "your-bucket-name"  # or make this dynamic
+            upload_file_to_s3(uploaded_file.name, bucket)
+            response = f"✅ Uploaded **{uploaded_file.name}** to `{bucket}`"
+        else:
+            response = run_chatbot(user_input)
+
+        timestamp = datetime.now().strftime("%H:%M:%S")
+        st.session_state.history.append(("bot", response, timestamp))
+
+# Show conversation
+for speaker, message, timestamp in reversed(st.session_state.history):
+    role = "message-user" if speaker == "user" else "message-bot"
+    avatar = "🧑" if speaker == "user" else "🤖"
+    st.markdown(
+        f"<div class='{role}'>{avatar} <strong>{speaker.title()}:</strong> {message}<div class='timestamp'>{timestamp}</div></div><hr>",
+        unsafe_allow_html=True
+    )
